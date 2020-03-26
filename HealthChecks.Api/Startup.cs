@@ -1,15 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace HealthChecks.Api
 {
@@ -26,6 +21,10 @@ namespace HealthChecks.Api
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services
+            .AddHealthChecksUI()
+            .AddHealthChecks()
+            .AddRedis(Configuration["ConnectionStrings:Cache"], "Redis");
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -44,7 +43,14 @@ namespace HealthChecks.Api
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapHealthChecks("healthchecks-data-ui", new HealthCheckOptions()
+                {
+                    Predicate = _ => true,
+                    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+                });
+                endpoints.MapHealthChecksUI();
+
+                endpoints.MapDefaultControllerRoute();
             });
         }
     }
